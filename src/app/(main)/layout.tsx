@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 
 import { BottomNav } from "@/components/app/bottom-nav";
 import { CurrencyProvider } from "@/components/app/currency-provider";
+import { TimezoneSync } from "@/components/app/timezone-sync";
 import { getCurrency } from "@/lib/currency";
 import { getUser } from "@/lib/supabase/server";
 import { getProfile } from "@/server/queries";
@@ -21,6 +22,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 
   return (
     <CurrencyProvider currency={getCurrency(profile?.currency).code}>
+      <TimezoneSync />
       <div className="pb-nav mx-auto flex w-full max-w-lg flex-1 flex-col">{children}</div>
       <BottomNav />
     </CurrencyProvider>

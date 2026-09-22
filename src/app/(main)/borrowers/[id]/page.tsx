@@ -13,6 +13,7 @@ import { WhatsAppReminder } from "@/components/app/whatsapp-reminder";
 import { Button } from "@/components/ui/button";
 import { summariseBorrowers, toDebtViews } from "@/lib/aggregate";
 import { getBorrower, getDebtsForBorrower, getRepaymentsForBorrower } from "@/server/queries";
+import { getToday } from "@/server/today";
 
 export async function generateMetadata({
   params,
@@ -30,12 +31,13 @@ export default async function BorrowerDetailPage({ params }: { params: Promise<{
   const borrower = await getBorrower(id);
   if (!borrower) notFound();
 
-  const [debtRows, repayments] = await Promise.all([
+  const [debtRows, repayments, today] = await Promise.all([
     getDebtsForBorrower(id),
     getRepaymentsForBorrower(id),
+    getToday(),
   ]);
 
-  const debts = toDebtViews(debtRows);
+  const debts = toDebtViews(debtRows, today);
   const summary = summariseBorrowers([borrower], debts)[0];
 
   const active = debts.filter((debt) => debt.outstandingMinor > 0);

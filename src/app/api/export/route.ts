@@ -6,6 +6,7 @@ import { csvFilename, toCsv, type CsvValue } from "@/lib/csv";
 import { fromMinor, toMinor } from "@/lib/money";
 import { getUser } from "@/lib/supabase/server";
 import { getAllRepayments, getLedger } from "@/server/queries";
+import { getToday } from "@/server/today";
 
 /**
  * CSV export.
@@ -35,8 +36,8 @@ export async function GET(request: NextRequest) {
   const requested = request.nextUrl.searchParams.get("type") ?? "ledger";
   const kind = (KINDS as string[]).includes(requested) ? (requested as ExportKind) : "ledger";
 
-  const { borrowers, debts } = await getLedger();
-  const debtViews = toDebtViews(debts);
+  const [{ borrowers, debts }, today] = await Promise.all([getLedger(), getToday()]);
+  const debtViews = toDebtViews(debts, today);
 
   let headers: string[];
   let rows: CsvValue[][];

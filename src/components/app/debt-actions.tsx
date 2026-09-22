@@ -2,7 +2,7 @@
 
 import { CheckCheck, Loader2, MoreHorizontal, Pencil, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 
 import { Amount } from "@/components/app/amount";
 import { ConfirmDialog } from "@/components/app/confirm-dialog";
@@ -29,7 +29,7 @@ import { Textarea } from "@/components/ui/textarea";
 import type { DebtView } from "@/lib/aggregate";
 import { runAction } from "@/lib/client-actions";
 import { formatDayMonth, todayDateOnly } from "@/lib/dates";
-import { formatMinor } from "@/lib/money";
+import { formatMinor, fromMinor } from "@/lib/money";
 import { fieldErrorsFrom, updateDebtSchema } from "@/lib/validators";
 import { deleteDebt, updateDebt } from "@/server/actions/debts";
 import { settleDebt } from "@/server/actions/repayments";
@@ -159,13 +159,32 @@ function EditDebtDrawer({
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }) {
-  const [amount, setAmount] = useState(String(debt.originalMinor / 100));
+  const [amount, setAmount] = useState(String(fromMinor(debt.originalMinor)));
   const [reason, setReason] = useState(debt.reason ?? "");
   const [borrowedDate, setBorrowedDate] = useState(debt.borrowedDate);
   const [expectedReturnDate, setExpectedReturnDate] = useState(debt.expectedReturnDate ?? "");
   const [notes, setNotes] = useState(debt.notes ?? "");
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [pending, startTransition] = useTransition();
+
+  /*
+   * Re-seed from props whenever the drawer closes. Without this the fields keep
+   * whatever was last typed: after a successful save the page shows the new
+   * amount while the drawer still holds the old one, and saving again would
+   * silently undo the correction.
+   */
+  useEffect(() => {
+    if (open) return;
+    const timer = window.setTimeout(() => {
+      setAmount(String(fromMinor(debt.originalMinor)));
+      setReason(debt.reason ?? "");
+      setBorrowedDate(debt.borrowedDate);
+      setExpectedReturnDate(debt.expectedReturnDate ?? "");
+      setNotes(debt.notes ?? "");
+      setFieldErrors({});
+    }, 250);
+    return () => window.clearTimeout(timer);
+  }, [open, debt]);
 
   function submit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();

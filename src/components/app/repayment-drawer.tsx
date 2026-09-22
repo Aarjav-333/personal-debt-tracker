@@ -22,7 +22,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { runAction } from "@/lib/client-actions";
 import { todayDateOnly } from "@/lib/dates";
-import { formatMinor, parseAmountInput } from "@/lib/money";
+import { formatMinor, fromMinor, parseAmountInput } from "@/lib/money";
 import { createRepayment, settleDebt, updateRepayment } from "@/server/actions/repayments";
 
 export interface RepaymentDebtSummary {
@@ -112,16 +112,32 @@ export function AddRepaymentDrawer({
 
   function handleFullPayment() {
     setSettlingInFull(true);
-    setAmountText(String(debt.outstandingMinor / 100));
+    setAmountText(String(fromMinor(debt.outstandingMinor)));
     setError(null);
     setStep("confirm");
   }
 
+  /**
+   * Leaves the settle-in-full path.
+   *
+   * The flag must be cleared on every route back to the form, or a partial
+   * amount entered afterwards would still be submitted as a full settlement.
+   */
+  function goToPartialForm() {
+    setSettlingInFull(false);
+    setError(null);
+    setStep("form");
+  }
+
   function submit() {
+    // Belt and braces: only settle when the amount on the confirmation screen
+    // really is the whole outstanding balance, whatever the flag says.
+    const settleInFull = settlingInFull && amountMinor === debt.outstandingMinor;
+
     startTransition(async () => {
-      // "Pay in full" goes through settle_debt(), which measures the exact
-      // remainder under a row lock rather than trusting the figure on screen.
-      const result = settlingInFull
+      // Settling goes through settle_debt(), which measures the exact remainder
+      // under a row lock rather than trusting the figure on screen.
+      const result = settleInFull
         ? await runAction(() => settleDebt({ debtId: debt.id, repaymentDate: date, method, notes }), {
             success: `${debt.borrowerName}'s debt is fully repaid`,
           })
@@ -133,6 +149,7 @@ export function AddRepaymentDrawer({
       if (result?.ok) setOpen(false);
       else if (result && !result.ok) {
         setError(result.error);
+        setSettlingInFull(false);
         setStep("form");
       }
     });
@@ -158,7 +175,7 @@ export function AddRepaymentDrawer({
                 <Button size="lg" onClick={handleFullPayment}>
                   Pay {money(debt.outstandingMinor)} in full
                 </Button>
-                <Button size="lg" variant="outline" onClick={() => setStep("form")}>
+                <Button size="lg" variant="outline" onClick={goToPartialForm}>
                   Enter partial amount
                 </Button>
                 <DrawerClose asChild>
@@ -241,7 +258,10 @@ export function AddRepaymentDrawer({
                   size="lg"
                   variant="ghost"
                   disabled={pending}
-                  onClick={() => setStep(settlingInFull ? "choose" : "form")}
+                  onClick={() => {
+                    setSettlingInFull(false);
+                    setStep(settlingInFull ? "choose" : "form");
+                  }}
                 >
                   Cancel
                 </Button>
@@ -287,7 +307,7 @@ export function EditRepaymentDrawer({
   const setOpen = isControlled ? (next: boolean) => onOpenChange?.(next) : setUncontrolledOpen;
 
   const [confirming, setConfirming] = useState(false);
-  const [amountText, setAmountText] = useState(String(repayment.amountMinor / 100));
+  const [amountText, setAmountText] = useState(String(fromMinor(repayment.amountMinor)));
   const [date, setDate] = useState(repayment.repaymentDate);
   const [method, setMethod] = useState<string | null>(repayment.method);
   const [notes, setNotes] = useState(repayment.notes ?? "");
@@ -298,7 +318,7 @@ export function EditRepaymentDrawer({
     if (open) return;
     const timer = window.setTimeout(() => {
       setConfirming(false);
-      setAmountText(String(repayment.amountMinor / 100));
+      setAmountText(String(fromMinor(repayment.amountMinor)));
       setDate(repayment.repaymentDate);
       setMethod(repayment.method);
       setNotes(repayment.notes ?? "");

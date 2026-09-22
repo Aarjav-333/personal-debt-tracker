@@ -2,7 +2,7 @@
 
 import { Loader2, MoreHorizontal, Pencil, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 
 import { Amount } from "@/components/app/amount";
 import { ConfirmDialog } from "@/components/app/confirm-dialog";
@@ -118,6 +118,18 @@ function EditBorrowerDrawer({
   const [notes, setNotes] = useState(borrower.notes ?? "");
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [pending, startTransition] = useTransition();
+
+  // Re-seed from props on close, so a saved edit is not shown back stale.
+  useEffect(() => {
+    if (open) return;
+    const timer = window.setTimeout(() => {
+      setName(borrower.name);
+      setPhone(borrower.phone ?? "");
+      setNotes(borrower.notes ?? "");
+      setFieldErrors({});
+    }, 250);
+    return () => window.clearTimeout(timer);
+  }, [open, borrower]);
 
   function submit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();

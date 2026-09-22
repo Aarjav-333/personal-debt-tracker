@@ -24,6 +24,9 @@ export interface TimelineEntry {
   detail: string | null;
 }
 
+/** Within a single day: money in, then money out, then the passive marker. */
+const KIND_ORDER: Record<TimelineKind, number> = { repayment: 0, borrow: 1, overdue: 2 };
+
 export function buildTimeline(rows: ActivityRow[], debts: DebtView[]): TimelineEntry[] {
   const entries: TimelineEntry[] = rows.map((row) => ({
     key: `${row.kind}-${row.id}`,
@@ -52,9 +55,7 @@ export function buildTimeline(rows: ActivityRow[], debts: DebtView[]): TimelineE
 
   return entries.sort((a, b) => {
     if (a.date !== b.date) return a.date < b.date ? 1 : -1;
-    // Within a day: money in, then money out, then the passive overdue marker.
-    const rank: Record<TimelineKind, number> = { repayment: 0, borrow: 1, overdue: 2 };
-    return rank[a.kind] - rank[b.kind];
+    return KIND_ORDER[a.kind] - KIND_ORDER[b.kind];
   });
 }
 

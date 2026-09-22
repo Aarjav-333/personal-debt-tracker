@@ -134,6 +134,33 @@ export function ExportPanel() {
   );
 }
 
+/**
+ * Asks the service worker to drop its cached pages and waits for the reply.
+ * Resolves regardless of outcome - a stuck worker must not block signing out.
+ */
+async function clearCachedPages(): Promise<void> {
+  if (!("serviceWorker" in navigator)) return;
+
+  try {
+    const registration = await Promise.race([
+      navigator.serviceWorker.ready,
+      new Promise<null>((resolve) => setTimeout(() => resolve(null), 1500)),
+    ]);
+    const worker = registration?.active;
+    if (!worker) return;
+
+    await new Promise<void>((resolve) => {
+      const channel = new MessageChannel();
+      const done = () => resolve();
+      channel.port1.onmessage = done;
+      setTimeout(done, 1500);
+      worker.postMessage({ type: "CLEAR_PRIVATE_CACHES" }, [channel.port2]);
+    });
+  } catch {
+    // Best effort: the session still ends either way.
+  }
+}
+
 export function SignOutButton() {
   return (
     <ConfirmDialog
@@ -147,8 +174,11 @@ export function SignOutButton() {
       }
       onConfirm={async () => {
         // Drop cached screens before the session goes, so the next person to
-        // open this device cannot browse back through the ledger.
-        navigator.serviceWorker?.controller?.postMessage({ type: "CLEAR_PRIVATE_CACHES" });
+        // open this device cannot browse back through the ledger. Waits for the
+        // worker to confirm: navigator.serviceWorker.controller is null until
+        // it has claimed the page, so firing and forgetting would silently skip
+        // the clear on the very first load after registration.
+        await clearCachedPages();
         await signOut();
       }}
       trigger={

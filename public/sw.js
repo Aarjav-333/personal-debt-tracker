@@ -54,9 +54,15 @@ self.addEventListener("activate", (event) => {
  * this device cannot page back through someone else's balances.
  */
 self.addEventListener("message", (event) => {
-  if (event.data?.type === "CLEAR_PRIVATE_CACHES") {
-    event.waitUntil(caches.delete(PAGES_CACHE));
-  }
+  if (event.data?.type !== "CLEAR_PRIVATE_CACHES") return;
+
+  event.waitUntil(
+    caches.delete(PAGES_CACHE).then(() => {
+      // Reply so the page can wait for the clear before ending the session,
+      // rather than redirecting while cached screens are still on disk.
+      event.ports?.[0]?.postMessage({ type: "CLEARED" });
+    }),
+  );
 });
 
 function isStaticAsset(url) {

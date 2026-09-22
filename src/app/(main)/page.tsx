@@ -14,6 +14,7 @@ import { buildTimeline } from "@/lib/activity";
 import { computeTotals, toDebtViews } from "@/lib/aggregate";
 import { DUE_SOON_WINDOW_DAYS } from "@/lib/debt-status";
 import { getActivity, getLedger } from "@/server/queries";
+import { getToday } from "@/server/today";
 
 export const metadata: Metadata = { title: "Overview" };
 
@@ -22,9 +23,13 @@ function plural(count: number, singular: string, pluralForm = `${singular}s`) {
 }
 
 export default async function DashboardPage() {
-  const [{ borrowers, debts }, activityRows] = await Promise.all([getLedger(), getActivity(40)]);
+  const [{ borrowers, debts }, activityRows, today] = await Promise.all([
+    getLedger(),
+    getActivity(40),
+    getToday(),
+  ]);
 
-  const debtViews = toDebtViews(debts);
+  const debtViews = toDebtViews(debts, today);
   const totals = computeTotals(debtViews, borrowers.length);
 
   const overdue = debtViews

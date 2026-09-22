@@ -2,6 +2,7 @@ import "server-only";
 
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
+import { cache } from "react";
 
 import { getSupabaseAnonKey, getSupabaseUrl } from "@/lib/env";
 import type { Database } from "@/lib/types/database";
@@ -38,12 +39,14 @@ export async function createClient() {
  * The signed-in user, or null.
  *
  * Always goes to the Supabase Auth server rather than trusting the cookie, so
- * a tampered session token can never be mistaken for a valid one.
+ * a tampered session token can never be mistaken for a valid one. Wrapped in
+ * cache() so a render that needs the user more than once (the layout guard and
+ * the profile query, say) still costs a single round-trip.
  */
-export async function getUser() {
+export const getUser = cache(async () => {
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
   return user;
-}
+});

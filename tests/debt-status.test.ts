@@ -1,6 +1,14 @@
 import { describe, expect, it } from "vitest";
 
-import { daysUntil, formatRelativeDueDate, parseDateOnly, toDateOnly } from "@/lib/dates";
+import {
+  daysUntil,
+  formatRelativeDueDate,
+  isValidTimeZone,
+  parseDateOnly,
+  startOfTodayInZone,
+  toDateOnly,
+  todayInZone,
+} from "@/lib/dates";
 import { deriveDebtStatus } from "@/lib/debt-status";
 import { toMinor } from "@/lib/money";
 
@@ -72,5 +80,32 @@ describe("derived debt status", () => {
 
   it("treats a fractional remainder as still outstanding", () => {
     expect(status(0.01, "2026-01-01")).toBe("overdue");
+  });
+});
+
+describe("timezone-aware today", () => {
+  it("resolves the calendar day in the user's zone, not the server's", () => {
+    // Anything from 18:30 UTC onwards is already the next day in India.
+    const zone = "Asia/Kolkata";
+    const inZone = todayInZone(zone);
+    expect(inZone).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+
+    const utcDay = new Date().toISOString().slice(0, 10);
+    // Same day or exactly one ahead - never behind.
+    expect(inZone >= utcDay).toBe(true);
+  });
+
+  it("gives local midnight, so day arithmetic stays whole", () => {
+    const start = startOfTodayInZone("Asia/Kolkata");
+    expect(start.getHours()).toBe(0);
+    expect(start.getMinutes()).toBe(0);
+  });
+
+  it("recognises real zones and rejects junk", () => {
+    expect(isValidTimeZone("Asia/Kolkata")).toBe(true);
+    expect(isValidTimeZone("UTC")).toBe(true);
+    expect(isValidTimeZone("Not/AZone")).toBe(false);
+    expect(isValidTimeZone(undefined)).toBe(false);
+    expect(isValidTimeZone("")).toBe(false);
   });
 });

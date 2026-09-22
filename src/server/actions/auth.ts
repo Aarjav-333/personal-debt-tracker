@@ -8,11 +8,25 @@ import { credentialsSchema } from "@/lib/validators";
 import { fail, failValidation, ok, type ActionResult } from "@/server/action-result";
 import { revalidateLedger } from "@/server/revalidate";
 
-/** Only allow redirects back into this app, never to an attacker-supplied origin. */
+/**
+ * Only allow redirects back into this app, never to an attacker-supplied origin.
+ *
+ * Resolved against a dummy base rather than pattern-matched: browsers normalise
+ * a backslash to a slash for http(s) URLs, so a hand-rolled check for a leading
+ * "//" still lets "/\evil.test" through as a protocol-relative redirect. Any
+ * form that escapes the origin changes it here, and is rejected.
+ */
 function safeNext(next: string | null | undefined): string {
   if (!next) return "/";
-  if (!next.startsWith("/") || next.startsWith("//")) return "/";
-  return next;
+
+  try {
+    const base = "http://ledger.invalid";
+    const resolved = new URL(next, base);
+    if (resolved.origin !== base) return "/";
+    return `${resolved.pathname}${resolved.search}`;
+  } catch {
+    return "/";
+  }
 }
 
 export async function signIn(input: unknown, next?: string): Promise<ActionResult> {

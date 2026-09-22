@@ -24,7 +24,7 @@ export function RetryButton({
   return (
     <Button
       className={className}
-      disabled={pending}
+      disabled={pending || !online}
       onClick={() =>
         startTransition(() => {
           if (onRetry) onRetry();

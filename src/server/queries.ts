@@ -3,7 +3,7 @@ import "server-only";
 import { cache } from "react";
 
 import { getCurrency, type CurrencyCode } from "@/lib/currency";
-import { createClient } from "@/lib/supabase/server";
+import { createClient, getUser } from "@/lib/supabase/server";
 import type {
   ActivityRow,
   BorrowerRow,
@@ -119,11 +119,10 @@ export const getActivity = cache(async (limit = 200): Promise<ActivityRow[]> => 
 });
 
 export const getProfile = cache(async (): Promise<ProfileRow | null> => {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getUser();
   if (!user) return null;
+
+  const supabase = await createClient();
 
   const { data, error } = await supabase.from("profiles").select("*").eq("id", user.id).maybeSingle();
   if (error) throw new Error(error.message);

@@ -78,3 +78,35 @@ export function formatTimestamp(value: string | null | undefined): string {
   const date = new Date(value);
   return isValid(date) ? format(date, "d MMM yyyy, h:mm a") : "\u2014";
 }
+
+/**
+ * Today's calendar day in a given IANA timezone, as `yyyy-MM-dd`.
+ *
+ * `en-CA` is used purely because it formats as ISO. Needed because the server
+ * runs on UTC: at 02:00 in Delhi the server is still on yesterday's date, and
+ * a debt that is genuinely overdue would not look it.
+ */
+export function todayInZone(timeZone: string): string {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date());
+}
+
+/** Local midnight of today as observed in `timeZone`. */
+export function startOfTodayInZone(timeZone: string): Date {
+  return parseDateOnly(todayInZone(timeZone)) ?? startOfToday();
+}
+
+/** Whether a string is an IANA zone this runtime recognises. */
+export function isValidTimeZone(value: string | undefined | null): value is string {
+  if (!value) return false;
+  try {
+    new Intl.DateTimeFormat("en-CA", { timeZone: value });
+    return true;
+  } catch {
+    return false;
+  }
+}

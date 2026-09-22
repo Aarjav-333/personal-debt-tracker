@@ -7,12 +7,13 @@ import { PageHeader } from "@/components/app/page-header";
 import { Button } from "@/components/ui/button";
 import { summariseBorrowers, toDebtViews } from "@/lib/aggregate";
 import { getLedger } from "@/server/queries";
+import { getToday } from "@/server/today";
 
 export const metadata: Metadata = { title: "Borrowers" };
 
 export default async function BorrowersPage() {
-  const { borrowers, debts } = await getLedger();
-  const summaries = summariseBorrowers(borrowers, toDebtViews(debts));
+  const [{ borrowers, debts }, today] = await Promise.all([getLedger(), getToday()]);
+  const summaries = summariseBorrowers(borrowers, toDebtViews(debts, today));
 
   const owing = summaries.filter((borrower) => borrower.outstandingMinor > 0).length;
 

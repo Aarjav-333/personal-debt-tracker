@@ -59,20 +59,34 @@ export async function proxy(request: NextRequest) {
 
   const { pathname, search } = request.nextUrl;
 
+  /**
+   * Redirect while keeping any cookies Supabase refreshed during this request.
+   *
+   * `getUser()` can rotate the access and refresh tokens, and `setAll` writes
+   * them onto `response`. Returning a bare NextResponse.redirect() would drop
+   * those Set-Cookie headers, leaving the browser holding a refresh token the
+   * server has already retired - which signs the user out on the next request.
+   */
+  function redirectTo(target: URL) {
+    const redirect = NextResponse.redirect(target);
+    for (const cookie of response.cookies.getAll()) redirect.cookies.set(cookie);
+    return redirect;
+  }
+
   if (!user && !matches(pathname, PUBLIC_ROUTES)) {
-    const redirect = request.nextUrl.clone();
-    redirect.pathname = "/login";
-    redirect.search = "";
+    const target = request.nextUrl.clone();
+    target.pathname = "/login";
+    target.search = "";
     // Remember where they were headed so login can land them back there.
-    if (pathname !== "/") redirect.searchParams.set("next", `${pathname}${search}`);
-    return NextResponse.redirect(redirect);
+    if (pathname !== "/") target.searchParams.set("next", `${pathname}${search}`);
+    return redirectTo(target);
   }
 
   if (user && matches(pathname, AUTH_ONLY_ROUTES)) {
-    const redirect = request.nextUrl.clone();
-    redirect.pathname = "/";
-    redirect.search = "";
-    return NextResponse.redirect(redirect);
+    const target = request.nextUrl.clone();
+    target.pathname = "/";
+    target.search = "";
+    return redirectTo(target);
   }
 
   return response;

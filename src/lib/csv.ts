@@ -8,9 +8,24 @@
 
 export type CsvValue = string | number | null | undefined;
 
+/** Plain decimal numbers, which must reach the spreadsheet untouched. */
+const NUMERIC = /^-?\d+(\.\d+)?$/;
+
+/** Characters that make Excel, LibreOffice and Sheets treat a cell as a formula. */
+const FORMULA_START = /^[=+\-@\t\r]/;
+
 function escapeCell(value: CsvValue): string {
   if (value === null || value === undefined) return "";
-  const text = String(value);
+  let text = String(value);
+
+  /*
+   * A borrower named `=HYPERLINK("http://...","Click")` is a valid name, and
+   * these files exist to be opened in a spreadsheet - which would evaluate it.
+   * Prefixing an apostrophe forces the cell to text. Real numbers are exempt so
+   * amounts still import as numbers.
+   */
+  if (!NUMERIC.test(text) && FORMULA_START.test(text)) text = `'${text}`;
+
   if (/[",\r\n]/.test(text)) return `"${text.replace(/"/g, '""')}"`;
   return text;
 }

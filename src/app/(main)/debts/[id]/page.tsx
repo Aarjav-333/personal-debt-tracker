@@ -15,6 +15,7 @@ import { toDebtView } from "@/lib/aggregate";
 import { formatFullDate, formatRelativeDueDate } from "@/lib/dates";
 import { toMinor } from "@/lib/money";
 import { getDebtBalance, getRepayments } from "@/server/queries";
+import { getToday } from "@/server/today";
 
 export async function generateMetadata({
   params,
@@ -32,8 +33,8 @@ export default async function DebtDetailPage({ params }: { params: Promise<{ id:
   const row = await getDebtBalance(id);
   if (!row) notFound();
 
-  const debt = toDebtView(row);
-  const repaymentRows = await getRepayments(id);
+  const [today, repaymentRows] = await Promise.all([getToday(), getRepayments(id)]);
+  const debt = toDebtView(row, today);
 
   const repayments: RepaymentEntry[] = repaymentRows.map((repayment) => ({
     id: repayment.id,

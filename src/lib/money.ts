@@ -90,8 +90,56 @@ export function formatAmount(
  * Parse free-text amount input from a form field.
  * Accepts "1,250", "1250.50", "\u20B91,250" and rejects anything else.
  */
+/**
+ * Work out which of `.` and `,` is the decimal point in free-text input.
+ *
+ * Both conventions have to be understood: the app formats INR as 1,25,000.50
+ * but EUR as 1.250,50, and a user types whichever their currency reads in.
+ * Rules, in order:
+ *   - Both present: the rightmost one is the decimal point.
+ *   - One present, appearing once, followed by one or two digits at the end:
+ *     a decimal point ("1250,50" is 1250.50).
+ *   - Anything else: grouping ("1,250" and "1,25,000" are whole amounts).
+ */
+function normaliseSeparators(value: string): string {
+  const lastDot = value.lastIndexOf(".");
+  const lastComma = value.lastIndexOf(",");
+
+  // Both present: the rightmost is the decimal point, the other is grouping.
+  // Handles "1,250.50" and "1.250,50" alike.
+  if (lastDot !== -1 && lastComma !== -1) {
+    const decimal = lastDot > lastComma ? "." : ",";
+    const group = decimal === "." ? "," : ".";
+    return value.split(group).join("").replace(decimal, ".");
+  }
+
+  // A comma alone is the decimal point only when it looks like one: a single
+  // comma with one or two digits after it ("1250,50"). Otherwise it is
+  // grouping, which covers "1,250" and Indian "1,25,000".
+  if (lastComma !== -1) {
+    const occurrences = value.split(",").length - 1;
+    const trailing = value.length - lastComma - 1;
+    const isDecimal = occurrences === 1 && trailing >= 1 && trailing <= 2;
+    return isDecimal ? value.replace(",", ".") : value.split(",").join("");
+  }
+
+  /*
+   * A dot alone is always the decimal point, never grouping.
+   *
+   * "10.005" is genuinely ambiguous - 10005 to a German reader, an over-precise
+   * 10.005 to everyone else - so it is left alone and rejected downstream with
+   * "use at most 2 decimal places". Guessing here would silently turn ten
+   * rupees into ten thousand.
+   */
+  return value;
+}
+
+/** Whitespace and every currency symbol the app can render. */
+const SYMBOLS = /[\s\u20B9$\u20AC\u00A3\u062F\u0625]/g;
+
 export function parseAmountInput(raw: string): { ok: true; minor: Minor } | { ok: false; error: string } {
-  const cleaned = raw.replace(/[\s,\u20B9$\u20AC\u00A3]/g, "").trim();
+  const cleaned = normaliseSeparators(raw.replace(SYMBOLS, "").trim());
+
   if (!cleaned) return { ok: false, error: "Enter an amount" };
   if (!/^\d*\.?\d*$/.test(cleaned)) return { ok: false, error: "Amount can only contain numbers" };
 

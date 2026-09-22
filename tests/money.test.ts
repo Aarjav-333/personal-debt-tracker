@@ -113,3 +113,44 @@ describe("repayment progress", () => {
     expect(repaidPercent(toMinor(100), 0)).toBe(0);
   });
 });
+
+describe("decimal separators in free-text input", () => {
+  it("reads a comma as the decimal point when that is what it must be", () => {
+    // How a EUR user writes 1250.50. Stripping the comma would make it 125,050.
+    expect(parseAmountInput("1250,50")).toEqual({ ok: true, minor: 125_050 });
+    expect(parseAmountInput("0,75")).toEqual({ ok: true, minor: 75 });
+  });
+
+  it("still reads a comma as grouping when it is grouping", () => {
+    expect(parseAmountInput("1,250")).toEqual({ ok: true, minor: 125_000 });
+    expect(parseAmountInput("1,25,000")).toEqual({ ok: true, minor: 12_500_000 });
+    expect(parseAmountInput("10,000")).toEqual({ ok: true, minor: 1_000_000 });
+  });
+
+  it("takes the rightmost separator as the decimal point when both appear", () => {
+    expect(parseAmountInput("1,250.50")).toEqual({ ok: true, minor: 125_050 });
+    expect(parseAmountInput("1.250,50")).toEqual({ ok: true, minor: 125_050 });
+  });
+
+  it("round-trips its own formatted output in every currency offered", () => {
+    for (const currency of ["INR", "USD", "EUR", "GBP"] as const) {
+      const formatted = formatMinor(125_050, { currency, alwaysShowDecimals: true });
+      const reparsed = parseAmountInput(formatted);
+      expect(reparsed, `${currency} -> ${formatted}`).toEqual({ ok: true, minor: 125_050 });
+    }
+  });
+});
+
+describe("ambiguous input is refused, never guessed", () => {
+  it("does not reinterpret an over-precise decimal as grouping", () => {
+    // "10.005" would be 10,005 to a German reader. Guessing either way could
+    // be a 1000x error, so it is rejected and the user retypes it.
+    expect(parseAmountInput("10.005")).toMatchObject({ ok: false });
+    expect(parseAmountInput("1.250")).toMatchObject({ ok: false });
+  });
+
+  it("keeps a dot as the decimal point", () => {
+    expect(parseAmountInput("10.5")).toEqual({ ok: true, minor: 1050 });
+    expect(parseAmountInput("10.50")).toEqual({ ok: true, minor: 1050 });
+  });
+});

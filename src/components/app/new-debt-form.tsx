@@ -10,7 +10,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { runAction } from "@/lib/client-actions";
-import { todayDateOnly } from "@/lib/dates";
 import { createDebtSchema, fieldErrorsFrom } from "@/lib/validators";
 import { createDebt } from "@/server/actions/debts";
 
@@ -24,9 +23,16 @@ import { createDebt } from "@/server/actions/debts";
 export function NewDebtForm({
   borrowers,
   defaultBorrowerId,
+  today,
 }: {
   borrowers: PickableBorrower[];
   defaultBorrowerId?: string;
+  /**
+   * Today in the user's own timezone, resolved on the server. Passed in rather
+   * than computed here so the server and client render the same date - the
+   * server is on UTC and can be a day behind the browser.
+   */
+  today: string;
 }) {
   const router = useRouter();
   const preselected = borrowers.find((borrower) => borrower.id === defaultBorrowerId) ?? null;
@@ -36,7 +42,7 @@ export function NewDebtForm({
   const [borrowerPhone, setBorrowerPhone] = useState("");
   const [amount, setAmount] = useState("");
   const [reason, setReason] = useState("");
-  const [borrowedDate, setBorrowedDate] = useState(todayDateOnly);
+  const [borrowedDate, setBorrowedDate] = useState(today);
   const [expectedReturnDate, setExpectedReturnDate] = useState("");
   const [notes, setNotes] = useState("");
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
@@ -111,11 +117,8 @@ export function NewDebtForm({
         <Input
           id="borrowed-date"
           type="date"
-          // Defaults to the *browser's* calendar day. A server in another
-          // timezone can render a different date, so the client value wins.
-          suppressHydrationWarning
           value={borrowedDate}
-          max={todayDateOnly()}
+          max={today}
           onChange={(event) => setBorrowedDate(event.target.value)}
           aria-invalid={Boolean(fieldErrors.borrowedDate)}
         />
