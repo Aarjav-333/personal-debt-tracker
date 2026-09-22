@@ -45,9 +45,17 @@ export async function proxy(request: NextRequest) {
 
   // Revalidates the token with Supabase Auth and writes refreshed cookies.
   // Nothing between here and the response should short-circuit it.
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  let user = null;
+  try {
+    ({
+      data: { user },
+    } = await supabase.auth.getUser());
+  } catch {
+    // Supabase itself is unreachable - a network failure, not a rejected
+    // session. Bouncing a signed-in user to the login screen would be a lie,
+    // so the request continues and the page's own error boundary reports it.
+    return response;
+  }
 
   const { pathname, search } = request.nextUrl;
 

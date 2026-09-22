@@ -10,7 +10,8 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
-    "icons": "node scripts/generate-icons.mjs"
+    "icons": "node scripts/generate-icons.mjs",
+    "verify:db": "node scripts/verify-db.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",
