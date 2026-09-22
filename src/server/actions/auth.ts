@@ -67,7 +67,10 @@ export async function signUp(input: unknown): Promise<ActionResult<{ needsEmailC
 
 export async function signOut(): Promise<void> {
   const supabase = await createClient();
-  await supabase.auth.signOut();
+  // Local scope ends this device's session only. The default, "global",
+  // revokes every refresh token for the account - so signing out on a laptop
+  // would silently log the installed iPhone app out too.
+  await supabase.auth.signOut({ scope: "local" });
   revalidateLedger();
   redirect("/login");
 }
