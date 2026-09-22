@@ -211,3 +211,11 @@
     -webkit-tap-highlight-color: transparent;
   }
 }
+
+/* Horizontal chip rows scroll without an intrusive scrollbar on desktop. */
+@utility scrollbar-none {
+  scrollbar-width: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
