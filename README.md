@@ -1,5 +1,7 @@
 # Debt Ledger
 
+**Live:** https://personal-debt-tracker-nine.vercel.app
+
 A personal Progressive Web App for tracking money you have lent out: who borrowed it, why, when it is expected back, every repayment they have made, and exactly how much is still pending.
 
 Built to live on an iPhone home screen.
@@ -174,7 +176,7 @@ In **Authentication → Providers**, make sure **Email** is enabled.
 
 In **Authentication → URL Configuration**, set:
 
-- **Site URL** → your production URL (e.g. `https://personal-debt-tracker.vercel.app`)
+- **Site URL** → your production URL (this deployment: `https://personal-debt-tracker-nine.vercel.app`)
 - **Redirect URLs** → add both `http://localhost:3000/auth/callback` and `https://<your-domain>/auth/callback`
 
 ### 4. Create your account

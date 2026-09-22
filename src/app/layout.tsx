@@ -33,6 +33,12 @@ export const metadata: Metadata = {
     title: "Ledger",
     statusBarStyle: "default",
   },
+  other: {
+    // Next 16 emits only the standardised `mobile-web-app-capable`. Safari on
+    // older iOS reads the legacy name, and it is what makes "Add to Home
+    // Screen" open without browser chrome, so both are declared.
+    "apple-mobile-web-app-capable": "yes",
+  },
   icons: {
     icon: [
       { url: "/icons/icon-192.png", sizes: "192x192", type: "image/png" },
