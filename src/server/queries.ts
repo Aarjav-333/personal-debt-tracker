@@ -2,6 +2,7 @@ import "server-only";
 
 import { cache } from "react";
 
+import { getCurrency, type CurrencyCode } from "@/lib/currency";
 import { createClient } from "@/lib/supabase/server";
 import type {
   ActivityRow,
@@ -151,4 +152,10 @@ export const getAllRepayments = cache(async (): Promise<RepaymentRow[]> => {
 
   if (error) throw new Error(error.message);
   return data ?? [];
+});
+
+/** The chosen currency, so Server Actions can phrase money in the same units the UI shows. */
+export const getProfileCurrency = cache(async (): Promise<CurrencyCode> => {
+  const profile = await getProfile();
+  return getCurrency(profile?.currency).code;
 });

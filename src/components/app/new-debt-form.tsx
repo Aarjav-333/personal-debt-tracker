@@ -111,6 +111,9 @@ export function NewDebtForm({
         <Input
           id="borrowed-date"
           type="date"
+          // Defaults to the *browser's* calendar day. A server in another
+          // timezone can render a different date, so the client value wins.
+          suppressHydrationWarning
           value={borrowedDate}
           max={todayDateOnly()}
           onChange={(event) => setBorrowedDate(event.target.value)}

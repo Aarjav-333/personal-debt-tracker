@@ -5,6 +5,7 @@ import { ArrowLeft, Loader2 } from "lucide-react";
 import { useEffect, useState, useTransition } from "react";
 
 import { Amount } from "@/components/app/amount";
+import { useCurrency } from "@/components/app/currency-provider";
 import { Button } from "@/components/ui/button";
 import {
   Drawer,
@@ -63,6 +64,9 @@ export function AddRepaymentDrawer({
   debt: RepaymentDebtSummary;
   trigger: React.ReactNode;
 }) {
+  const currency = useCurrency();
+  const money = (minor: number) => formatMinor(minor, { currency });
+
   const [open, setOpen] = useState(false);
   const [step, setStep] = useState<Step>("choose");
   const [settlingInFull, setSettlingInFull] = useState(false);
@@ -99,7 +103,7 @@ export function AddRepaymentDrawer({
       return;
     }
     if (result.minor > debt.outstandingMinor) {
-      setError(`That is more than the ${formatMinor(debt.outstandingMinor)} still outstanding.`);
+      setError(`That is more than the ${money(debt.outstandingMinor)} still outstanding.`);
       return;
     }
     setError(null);
@@ -123,7 +127,7 @@ export function AddRepaymentDrawer({
           })
         : await runAction(
             () => createRepayment({ debtId: debt.id, amount: amountText, repaymentDate: date, method, notes }),
-            { success: `Recorded ${formatMinor(amountMinor)} from ${debt.borrowerName}` },
+            { success: `Recorded ${money(amountMinor)} from ${debt.borrowerName}` },
           );
 
       if (result?.ok) setOpen(false);
@@ -152,7 +156,7 @@ export function AddRepaymentDrawer({
 
               <DrawerFooter>
                 <Button size="lg" onClick={handleFullPayment}>
-                  Pay {formatMinor(debt.outstandingMinor)} in full
+                  Pay {money(debt.outstandingMinor)} in full
                 </Button>
                 <Button size="lg" variant="outline" onClick={() => setStep("form")}>
                   Enter partial amount
@@ -210,12 +214,12 @@ export function AddRepaymentDrawer({
               <DrawerHeader>
                 <DrawerTitle>
                   {settlingInFull
-                    ? `Mark the remaining ${formatMinor(debt.outstandingMinor)} as received?`
-                    : `Record ${formatMinor(amountMinor)} repayment from ${debt.borrowerName}?`}
+                    ? `Mark the remaining ${money(debt.outstandingMinor)} as received?`
+                    : `Record ${money(amountMinor)} repayment from ${debt.borrowerName}?`}
                 </DrawerTitle>
                 <DrawerDescription>
                   This adds a repayment to the history. The original{" "}
-                  {formatMinor(debt.originalMinor)} borrowed stays on record.
+                  {money(debt.originalMinor)} borrowed stays on record.
                 </DrawerDescription>
               </DrawerHeader>
 
@@ -274,6 +278,9 @@ export function EditRepaymentDrawer({
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
 }) {
+  const currency = useCurrency();
+  const money = (minor: number) => formatMinor(minor, { currency });
+
   const [uncontrolledOpen, setUncontrolledOpen] = useState(false);
   const isControlled = controlledOpen !== undefined;
   const open = isControlled ? controlledOpen : uncontrolledOpen;
@@ -315,7 +322,7 @@ export function EditRepaymentDrawer({
     }
     if (result.minor > maxAllowedMinor) {
       setError(
-        `At most ${formatMinor(maxAllowedMinor)} can be recorded here without exceeding the ${formatMinor(debt.originalMinor)} borrowed.`,
+        `At most ${money(maxAllowedMinor)} can be recorded here without exceeding the ${money(debt.originalMinor)} borrowed.`,
       );
       return;
     }

@@ -4,6 +4,7 @@ import { formatMinor, minorToNumericString, toMinor } from "@/lib/money";
 import { createClient } from "@/lib/supabase/server";
 import { createRepaymentSchema, settleDebtSchema, updateRepaymentSchema } from "@/lib/validators";
 import { AUTH_REQUIRED, fail, failValidation, mapDbError, ok, type ActionResult } from "@/server/action-result";
+import { getProfileCurrency } from "@/server/queries";
 import { revalidateLedger } from "@/server/revalidate";
 
 /**
@@ -63,9 +64,10 @@ export async function createRepayment(input: unknown): Promise<ActionResult<{ id
   // database enforces the same rule under a row lock, which is what makes it
   // safe against two repayments being recorded at the same moment.
   if (amount > balance.outstandingMinor) {
+    const currency = await getProfileCurrency();
     return fail(
-      `That is more than the ${formatMinor(balance.outstandingMinor)} still outstanding on this debt.`,
-      { amount: `Outstanding is ${formatMinor(balance.outstandingMinor)}` },
+      `That is more than the ${formatMinor(balance.outstandingMinor, { currency })} still outstanding on this debt.`,
+      { amount: `Outstanding is ${formatMinor(balance.outstandingMinor, { currency })}` },
     );
   }
 
@@ -123,9 +125,10 @@ export async function updateRepayment(input: unknown): Promise<ActionResult> {
   const headroomMinor = balance.originalMinor - otherRepaymentsMinor;
 
   if (amount > headroomMinor) {
+    const currency = await getProfileCurrency();
     return fail(
-      `That would push the total repaid past the ${formatMinor(balance.originalMinor)} originally borrowed.`,
-      { amount: `At most ${formatMinor(headroomMinor)} can be recorded here` },
+      `That would push the total repaid past the ${formatMinor(balance.originalMinor, { currency })} originally borrowed.`,
+      { amount: `At most ${formatMinor(headroomMinor, { currency })} can be recorded here` },
     );
   }
 
