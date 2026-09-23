@@ -2,7 +2,7 @@
 
 import { cn } from "cn";
 import { ArrowLeft, Loader2 } from "lucide-react";
-import { useEffect, useState, useTransition } from "react";
+import { useState, useTransition } from "react";
 
 import { Amount } from "@/components/app/amount";
 import { useCurrency } from "@/components/app/currency-provider";
@@ -20,6 +20,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { useResetOnClose } from "@/hooks/use-reset-on-close";
 import { runAction } from "@/lib/client-actions";
 import { todayDateOnly } from "@/lib/dates";
 import { formatMinor, fromMinor, parseAmountInput } from "@/lib/money";
@@ -77,20 +78,16 @@ export function AddRepaymentDrawer({
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 
-  // Reset to a clean slate whenever the drawer is dismissed.
-  useEffect(() => {
-    if (open) return;
-    const timer = window.setTimeout(() => {
-      setStep("choose");
-      setSettlingInFull(false);
-      setAmountText("");
-      setDate(todayDateOnly());
-      setMethod(null);
-      setNotes("");
-      setError(null);
-    }, 250);
-    return () => window.clearTimeout(timer);
-  }, [open]);
+  // Back to a clean slate whenever the drawer is dismissed.
+  useResetOnClose(open, () => {
+    setStep("choose");
+    setSettlingInFull(false);
+    setAmountText("");
+    setDate(todayDateOnly());
+    setMethod(null);
+    setNotes("");
+    setError(null);
+  });
 
   const parsed = parseAmountInput(amountText);
   const amountMinor = parsed.ok ? parsed.minor : 0;
@@ -146,11 +143,18 @@ export function AddRepaymentDrawer({
             { success: `Recorded ${money(amountMinor)} from ${debt.borrowerName}` },
           );
 
-      if (result?.ok) setOpen(false);
-      else if (result && !result.ok) {
+      if (result?.ok) {
+        setOpen(false);
+        return;
+      }
+
+      if (result && !result.ok) {
         setError(result.error);
-        setSettlingInFull(false);
-        setStep("form");
+        // Stay where they are. Dropping a failed settlement back into the
+        // partial form would turn the retry into a plain repayment for the
+        // figure on screen, losing the row-locked remainder measurement that
+        // is the whole reason settling has its own path.
+        if (!settleInFull) setStep("form");
       }
     });
   }
@@ -258,10 +262,11 @@ export function AddRepaymentDrawer({
                   size="lg"
                   variant="ghost"
                   disabled={pending}
-                  onClick={() => {
-                    setSettlingInFull(false);
-                    setStep(settlingInFull ? "choose" : "form");
-                  }}
+                  // Back to wherever they came from. The flag is left alone:
+                  // both routes out of "choose" set it explicitly, and clearing
+                  // it here would read the pre-update value on the next line,
+                  // which looks like a bug even though it is not.
+                  onClick={() => setStep(settlingInFull ? "choose" : "form")}
                 >
                   Cancel
                 </Button>
@@ -314,18 +319,14 @@ export function EditRepaymentDrawer({
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 
-  useEffect(() => {
-    if (open) return;
-    const timer = window.setTimeout(() => {
-      setConfirming(false);
-      setAmountText(String(fromMinor(repayment.amountMinor)));
-      setDate(repayment.repaymentDate);
-      setMethod(repayment.method);
-      setNotes(repayment.notes ?? "");
-      setError(null);
-    }, 250);
-    return () => window.clearTimeout(timer);
-  }, [open, repayment]);
+  useResetOnClose(open, () => {
+    setConfirming(false);
+    setAmountText(String(fromMinor(repayment.amountMinor)));
+    setDate(repayment.repaymentDate);
+    setMethod(repayment.method);
+    setNotes(repayment.notes ?? "");
+    setError(null);
+  });
 
   const otherRepaymentsMinor = debt.repaidMinor - repayment.amountMinor;
   const maxAllowedMinor = debt.originalMinor - otherRepaymentsMinor;

@@ -4,14 +4,14 @@ import Link from "next/link";
 
 import { Amount } from "@/components/app/amount";
 import type { DebtView } from "@/lib/aggregate";
-import { formatDayMonth, formatRelativeDueDate } from "@/lib/dates";
+import { formatDayMonth, formatRelativeDays } from "@/lib/dates";
 
 /**
  * Compact row for the dashboard's "Due soon" and "Overdue" lists: who, how
  * much is still pending, and when it was or is due.
  */
 export function DueDebtRow({ debt }: { debt: DebtView }) {
-  const relative = formatRelativeDueDate(debt.expectedReturnDate);
+  const relative = formatRelativeDays(debt.daysUntilDue);
   const overdue = debt.status === "overdue";
 
   return (

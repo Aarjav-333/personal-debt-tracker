@@ -2,7 +2,7 @@
 
 import { CheckCheck, Loader2, MoreHorizontal, Pencil, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useEffect, useState, useTransition } from "react";
+import { useState, useTransition } from "react";
 
 import { Amount } from "@/components/app/amount";
 import { ConfirmDialog } from "@/components/app/confirm-dialog";
@@ -26,6 +26,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { useResetOnClose } from "@/hooks/use-reset-on-close";
 import type { DebtView } from "@/lib/aggregate";
 import { runAction } from "@/lib/client-actions";
 import { formatDayMonth, todayDateOnly } from "@/lib/dates";
@@ -167,24 +168,14 @@ function EditDebtDrawer({
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [pending, startTransition] = useTransition();
 
-  /*
-   * Re-seed from props whenever the drawer closes. Without this the fields keep
-   * whatever was last typed: after a successful save the page shows the new
-   * amount while the drawer still holds the old one, and saving again would
-   * silently undo the correction.
-   */
-  useEffect(() => {
-    if (open) return;
-    const timer = window.setTimeout(() => {
-      setAmount(String(fromMinor(debt.originalMinor)));
-      setReason(debt.reason ?? "");
-      setBorrowedDate(debt.borrowedDate);
-      setExpectedReturnDate(debt.expectedReturnDate ?? "");
-      setNotes(debt.notes ?? "");
-      setFieldErrors({});
-    }, 250);
-    return () => window.clearTimeout(timer);
-  }, [open, debt]);
+  useResetOnClose(open, () => {
+    setAmount(String(fromMinor(debt.originalMinor)));
+    setReason(debt.reason ?? "");
+    setBorrowedDate(debt.borrowedDate);
+    setExpectedReturnDate(debt.expectedReturnDate ?? "");
+    setNotes(debt.notes ?? "");
+    setFieldErrors({});
+  });
 
   function submit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();

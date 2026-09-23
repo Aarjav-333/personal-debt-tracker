@@ -4,7 +4,7 @@ import { cookies } from "next/headers";
 import { cache } from "react";
 
 import { isValidTimeZone, startOfTodayInZone } from "@/lib/dates";
-import { TIMEZONE_COOKIE } from "@/lib/timezone";
+import { decodeTimezone, TIMEZONE_COOKIE } from "@/lib/timezone";
 
 /**
  * "Today", as the user's own calendar sees it.
@@ -21,8 +21,6 @@ import { TIMEZONE_COOKIE } from "@/lib/timezone";
  */
 export const getToday = cache(async (): Promise<Date> => {
   const store = await cookies();
-  // The client percent-encodes the value; cookies().get() returns it raw.
-  const raw = store.get(TIMEZONE_COOKIE)?.value;
-  const zone = raw ? decodeURIComponent(raw) : undefined;
+  const zone = decodeTimezone(store.get(TIMEZONE_COOKIE)?.value);
   return startOfTodayInZone(isValidTimeZone(zone) ? zone : "UTC");
 });

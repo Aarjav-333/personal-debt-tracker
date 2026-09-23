@@ -2,7 +2,7 @@
 
 import { Loader2, MoreHorizontal, Pencil, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useEffect, useState, useTransition } from "react";
+import { useState, useTransition } from "react";
 
 import { Amount } from "@/components/app/amount";
 import { ConfirmDialog } from "@/components/app/confirm-dialog";
@@ -25,6 +25,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { useResetOnClose } from "@/hooks/use-reset-on-close";
 import { runAction } from "@/lib/client-actions";
 import { borrowerInputSchema, fieldErrorsFrom } from "@/lib/validators";
 import { deleteBorrower, updateBorrower } from "@/server/actions/borrowers";
@@ -119,17 +120,12 @@ function EditBorrowerDrawer({
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [pending, startTransition] = useTransition();
 
-  // Re-seed from props on close, so a saved edit is not shown back stale.
-  useEffect(() => {
-    if (open) return;
-    const timer = window.setTimeout(() => {
-      setName(borrower.name);
-      setPhone(borrower.phone ?? "");
-      setNotes(borrower.notes ?? "");
-      setFieldErrors({});
-    }, 250);
-    return () => window.clearTimeout(timer);
-  }, [open, borrower]);
+  useResetOnClose(open, () => {
+    setName(borrower.name);
+    setPhone(borrower.phone ?? "");
+    setNotes(borrower.notes ?? "");
+    setFieldErrors({});
+  });
 
   function submit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();

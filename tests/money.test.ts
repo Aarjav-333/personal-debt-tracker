@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 
+import { CURRENCY_OPTIONS } from "@/lib/currency";
 import {
   addMinor,
   formatMinor,
@@ -133,15 +134,29 @@ describe("decimal separators in free-text input", () => {
   });
 
   it("round-trips its own formatted output in every currency offered", () => {
-    for (const currency of ["INR", "USD", "EUR", "GBP"] as const) {
-      const formatted = formatMinor(125_050, { currency, alwaysShowDecimals: true });
+    // Iterates the real currency table rather than a hand-written list: AED has
+    // no single-glyph symbol, so Intl renders the letters "AED" and a symbol
+    // blacklist silently missed it.
+    for (const { code } of CURRENCY_OPTIONS) {
+      const formatted = formatMinor(125_050, { currency: code, alwaysShowDecimals: true });
       const reparsed = parseAmountInput(formatted);
-      expect(reparsed, `${currency} -> ${formatted}`).toEqual({ ok: true, minor: 125_050 });
+      expect(reparsed, `${code} -> ${formatted}`).toEqual({ ok: true, minor: 125_050 });
+
     }
   });
 });
 
 describe("ambiguous input is refused, never guessed", () => {
+  it("refuses a bare grouped thousand rather than pick a reading", () => {
+    /*
+     * "5.000" is 5000 to a German reader and an over-precise 5.00 to everyone
+     * else - a 1000x gap. The app never has to reparse its own grouped output
+     * (prefills use a canonical "5000"), so refusing is free and guessing is not.
+     */
+    expect(parseAmountInput("5.000")).toMatchObject({ ok: false });
+    expect(parseAmountInput("5,000")).toEqual({ ok: true, minor: 500_000 });
+  });
+
   it("does not reinterpret an over-precise decimal as grouping", () => {
     // "10.005" would be 10,005 to a German reader. Guessing either way could
     // be a 1000x error, so it is rejected and the user retypes it.

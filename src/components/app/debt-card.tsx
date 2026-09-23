@@ -8,7 +8,7 @@ import { RepaymentProgress } from "@/components/app/repayment-progress";
 import { StatusBadge } from "@/components/app/status-badge";
 import { Button } from "@/components/ui/button";
 import type { DebtView } from "@/lib/aggregate";
-import { formatDayMonth, formatRelativeDueDate } from "@/lib/dates";
+import { formatDayMonth, formatRelativeDays } from "@/lib/dates";
 
 /**
  * One borrowing occasion.
@@ -26,7 +26,7 @@ export function DebtCard({
   className?: string;
 }) {
   const settled = debt.outstandingMinor <= 0;
-  const dueLabel = formatRelativeDueDate(debt.expectedReturnDate);
+  const dueLabel = formatRelativeDays(debt.daysUntilDue);
 
   return (
     <article className={cn("bg-card border-border rounded-xl border p-4", className)}>

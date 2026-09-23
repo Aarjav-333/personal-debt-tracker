@@ -21,10 +21,13 @@ function escapeCell(value: CsvValue): string {
   /*
    * A borrower named `=HYPERLINK("http://...","Click")` is a valid name, and
    * these files exist to be opened in a spreadsheet - which would evaluate it.
-   * Prefixing an apostrophe forces the cell to text. Real numbers are exempt so
-   * amounts still import as numbers.
+   * Prefixing an apostrophe forces the cell to text.
+   *
+   * The NUMERIC exemption only ever matters for a leading "-": no decimal
+   * number can start with =, +, @, tab or CR. It is there so a negative running
+   * balance still imports as a number rather than as text.
    */
-  if (!NUMERIC.test(text) && FORMULA_START.test(text)) text = `'${text}`;
+  if (FORMULA_START.test(text) && !NUMERIC.test(text)) text = `'${text}`;
 
   if (/[",\r\n]/.test(text)) return `"${text.replace(/"/g, '""')}"`;
   return text;
@@ -37,7 +40,11 @@ export function toCsv(headers: string[], rows: CsvValue[][]): string {
   return `﻿${lines.join("\r\n")}\r\n`;
 }
 
-export function csvFilename(kind: string): string {
-  const stamp = new Date().toISOString().slice(0, 10);
-  return `debt-ledger-${kind}-${stamp}.csv`;
+/**
+ * Takes the date rather than reading a clock, so the stamp matches the day the
+ * rows were computed against. Otherwise an export at 01:00 in Delhi is named
+ * with yesterday while its overdue flags use today.
+ */
+export function csvFilename(kind: string, date: string): string {
+  return `debt-ledger-${kind}-${date}.csv`;
 }

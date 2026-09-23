@@ -1,5 +1,5 @@
 import { deriveDebtStatus, type DebtStatus } from "@/lib/debt-status";
-import { daysUntil, startOfToday } from "@/lib/dates";
+import { daysUntil } from "@/lib/dates";
 import { repaidPercent, toMinor, type Minor } from "@/lib/money";
 import type { BorrowerRow, DebtBalanceRow } from "@/lib/types/database";
 
@@ -71,7 +71,12 @@ export interface PortfolioTotals {
   paidDebtCount: number;
 }
 
-export function toDebtView(row: DebtBalanceRow, today: Date = startOfToday()): DebtView {
+/**
+ * The `today` argument is required on purpose. Defaulting it would let a new
+ * caller fall back to the server's clock without noticing, which is exactly the
+ * timezone bug this signature exists to make impossible.
+ */
+export function toDebtView(row: DebtBalanceRow, today: Date): DebtView {
   const originalMinor = toMinor(row.original_amount);
   const repaidMinor = toMinor(row.total_repaid);
   // Recomputed rather than trusting the view's own subtraction, so the app and
@@ -100,7 +105,7 @@ export function toDebtView(row: DebtBalanceRow, today: Date = startOfToday()): D
   };
 }
 
-export function toDebtViews(rows: DebtBalanceRow[], today: Date = startOfToday()): DebtView[] {
+export function toDebtViews(rows: DebtBalanceRow[], today: Date): DebtView[] {
   return rows.map((row) => toDebtView(row, today));
 }
 

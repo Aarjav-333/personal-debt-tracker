@@ -12,7 +12,7 @@ import { StatusBadge } from "@/components/app/status-badge";
 import { WhatsAppReminder } from "@/components/app/whatsapp-reminder";
 import { Button } from "@/components/ui/button";
 import { toDebtView } from "@/lib/aggregate";
-import { formatFullDate, formatRelativeDueDate } from "@/lib/dates";
+import { formatFullDate, formatRelativeDays } from "@/lib/dates";
 import { toMinor } from "@/lib/money";
 import { getDebtBalance, getRepayments } from "@/server/queries";
 import { getToday } from "@/server/today";
@@ -54,7 +54,7 @@ export default async function DebtDetailPage({ params }: { params: Promise<{ id:
   };
 
   const settled = debt.outstandingMinor <= 0;
-  const dueLabel = formatRelativeDueDate(debt.expectedReturnDate);
+  const dueLabel = formatRelativeDays(debt.daysUntilDue);
 
   return (
     <>

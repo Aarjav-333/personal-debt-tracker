@@ -87,10 +87,6 @@ export function formatAmount(
 }
 
 /**
- * Parse free-text amount input from a form field.
- * Accepts "1,250", "1250.50", "\u20B91,250" and rejects anything else.
- */
-/**
  * Work out which of `.` and `,` is the decimal point in free-text input.
  *
  * Both conventions have to be understood: the app formats INR as 1,25,000.50
@@ -134,13 +130,29 @@ function normaliseSeparators(value: string): string {
   return value;
 }
 
-/** Whitespace and every currency symbol the app can render. */
-const SYMBOLS = /[\s\u20B9$\u20AC\u00A3\u062F\u0625]/g;
-
+/**
+ * Parse free-text amount input from a form field.
+ *
+ * Accepts anything the app itself can render, so a displayed balance can be
+ * pasted straight back in: "1,250", "1250.50", "\u20B91,250", "1.250,50 \u20AC",
+ * "AED 1,250.50". Rejects anything ambiguous rather than guessing.
+ *
+ * The currency affix is stripped by position rather than matched against a list
+ * of symbols. Intl does not always produce one: `narrowSymbol` falls back to
+ * the ISO code for currencies with no single-glyph symbol, so AED formats as
+ * the literal letters "AED" - which a hardcoded symbol list would never catch,
+ * leaving the app unable to parse its own output.
+ */
 export function parseAmountInput(raw: string): { ok: true; minor: Minor } | { ok: false; error: string } {
-  const cleaned = normaliseSeparators(raw.replace(SYMBOLS, "").trim());
+  const input = raw.trim();
+  if (!input) return { ok: false, error: "Enter an amount" };
 
-  if (!cleaned) return { ok: false, error: "Enter an amount" };
+  // Drop a leading or trailing affix. A leading "-" is deliberately kept so a
+  // negative amount still fails validation instead of being silently accepted.
+  const withoutAffix = input.replace(/^[^\d-]+/, "").replace(/[^\d]+$/, "");
+  const cleaned = normaliseSeparators(withoutAffix);
+
+  if (!cleaned) return { ok: false, error: "Amount can only contain numbers" };
   if (!/^\d*\.?\d*$/.test(cleaned)) return { ok: false, error: "Amount can only contain numbers" };
 
   const value = Number(cleaned);

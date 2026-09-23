@@ -3,6 +3,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { summariseBorrowers, toDebtViews } from "@/lib/aggregate";
 import { STATUS_META } from "@/lib/debt-status";
 import { csvFilename, toCsv, type CsvValue } from "@/lib/csv";
+import { toDateOnly } from "@/lib/dates";
 import { fromMinor, toMinor } from "@/lib/money";
 import { getUser } from "@/lib/supabase/server";
 import { getAllRepayments, getLedger } from "@/server/queries";
@@ -217,7 +218,7 @@ export async function GET(request: NextRequest) {
   return new NextResponse(csv, {
     headers: {
       "Content-Type": "text/csv; charset=utf-8",
-      "Content-Disposition": `attachment; filename="${csvFilename(kind)}"`,
+      "Content-Disposition": `attachment; filename="${csvFilename(kind, toDateOnly(today))}"`,
       "Cache-Control": "no-store",
     },
   });

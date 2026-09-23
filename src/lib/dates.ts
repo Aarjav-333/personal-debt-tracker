@@ -58,18 +58,29 @@ export function formatFullDate(value: string | null | undefined): string {
   return date ? format(date, "d MMMM yyyy") : "\u2014";
 }
 
-/** Human phrasing for a due date: "Today", "Tomorrow", "In 3 days", "5 days ago". */
-export function formatRelativeDueDate(
-  value: string | null | undefined,
-  today = startOfToday(),
-): string | null {
-  const days = daysUntil(value, today);
+/**
+ * Human phrasing for an already-computed day count: "Today", "Tomorrow",
+ * "In 3 days", "5 days ago".
+ *
+ * Takes the count rather than a date so callers can reuse the one that was
+ * derived against the user's timezone. Re-deriving here would silently fall
+ * back to the server's clock and print "Today" beside an "Overdue" badge.
+ */
+export function formatRelativeDays(days: number | null): string | null {
   if (days === null) return null;
   if (days === 0) return "Today";
   if (days === 1) return "Tomorrow";
   if (days === -1) return "Yesterday";
   if (days > 1) return `In ${days} days`;
   return `${Math.abs(days)} days ago`;
+}
+
+/** As above, from a raw date. Prefer formatRelativeDays where the count exists. */
+export function formatRelativeDueDate(
+  value: string | null | undefined,
+  today = startOfToday(),
+): string | null {
+  return formatRelativeDays(daysUntil(value, today));
 }
 
 /** Timestamp formatting for the activity ledger. */
